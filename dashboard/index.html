@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MISP IOC Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 42px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .chart-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+
+        .alert-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .alert-time {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .alert-msg {
+            font-size: 14px;
+            margin-top: 5px;
+            color: #333;
+        }
+
+        canvas {
+            max-height: 300px;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2col {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MISP IOC Dashboard</h1>
+            <p class="subtitle">Real-time Threat Intelligence & Suricata Detection Monitoring</p>
+        </header>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total IOCs</div>
+                <div class="stat-number" id="total-iocs">240</div>
+                <div class="stat-label">From MISP Feeds</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Rules</div>
+                <div class="stat-number" id="active-rules">387</div>
+                <div class="stat-label">Suricata Signatures</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Alerts Today</div>
+                <div class="stat-number" id="alerts-today">24</div>
+                <div class="stat-label">Detection Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">False Positives</div>
+                <div class="stat-number" id="false-positives">3</div>
+                <div class="stat-label">Flagged & Tuned</div>
+            </div>
+        </div>
+
+        <div class="grid-2col">
+            <div class="chart-container">
+                <div class="chart-title">IOC Types Distribution</div>
+                <canvas id="iocChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Alerts Over Time (Last 7 Days)</div>
+                <canvas id="alertsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">Recent Suricata Alerts</div>
+            <div class="alert-list" id="alert-list">
+                <!-- Alerts will be dynamically loaded -->
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">Top Triggered IOCs</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>IOC Value</th>
+                        <th>Type</th>
+                        <th>Hits</th>
+                        <th>Last Seen</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="top-iocs">
+                    <!-- IOCs will be dynamically loaded -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">Rule Update History</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Rules Count</th>
+                        <th>IOCs Added</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="update-history">
+                    <!-- History will be dynamically loaded -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+    let statsData = null;
+    let charts = { ioc: null, alerts: null };
+    
+    // Show loading state
+    function showLoading() {
+        document.getElementById('total-iocs').textContent = '...';
+        document.getElementById('active-rules').textContent = '...';
+        document.getElementById('alerts-today').textContent = '...';
+        document.getElementById('false-positives').textContent = '...';
+    }
+    
+    // Fetch real data from JSON file
+    async function fetchData() {
+        try {
+            const response = await fetch('/dashboard/data.json?t=' + new Date().getTime());
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            statsData = await response.json();
+            updateDashboard();
+        } catch (error) {
+            console.error('Error loading data:', error);
+            // Show error message
+            document.getElementById('total-iocs').textContent = 'Error';
+            document.getElementById('active-rules').textContent = 'Error';
+            document.getElementById('alerts-today').textContent = 'Error';
+            document.getElementById('false-positives').textContent = 'Error';
+        }
+    }
+    
+    function updateDashboard() {
+        if (!statsData) return;
+        
+        // Update stats cards
+        document.getElementById('total-iocs').textContent = statsData.stats.total_iocs || 0;
+        document.getElementById('active-rules').textContent = statsData.stats.active_rules || 0;
+        document.getElementById('alerts-today').textContent = statsData.stats.alerts_today || 0;
+        document.getElementById('false-positives').textContent = statsData.stats.false_positives || 0;
+        
+        // Destroy old charts if they exist
+        if (charts.ioc) charts.ioc.destroy();
+        if (charts.alerts) charts.alerts.destroy();
+        
+        // Update IOC Types Chart
+        const iocCtx = document.getElementById('iocChart').getContext('2d');
+        charts.ioc = new Chart(iocCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statsData.ioc_distribution.labels,
+                datasets: [{
+                    data: statsData.ioc_distribution.data,
+                    backgroundColor: ['#667eea', '#764ba2', '#f093fb']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+        
+        // Update Alerts Over Time Chart
+        const alertsCtx = document.getElementById('alertsChart').getContext('2d');
+        charts.alerts = new Chart(alertsCtx, {
+            type: 'line',
+            data: {
+                labels: statsData.alerts_over_time.labels,
+                datasets: [{
+                    label: 'Alerts',
+                    data: statsData.alerts_over_time.data,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+        
+        // Load other sections
+        loadAlerts();
+        loadTopIOCs();
+        loadUpdateHistory();
+    }
+    
+    function loadAlerts() {
+        const alertList = document.getElementById('alert-list');
+        alertList.innerHTML = '';
+        
+        const alerts = statsData.recent_alerts || [];
+        
+        if (alerts.length === 0) {
+            alertList.innerHTML = '<div class="alert-item"><div class="alert-msg">No recent alerts</div></div>';
+            return;
+        }
+        
+        alerts.slice(0, 20).forEach(alert => {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert-item';
+            alertDiv.innerHTML = `
+                <div class="alert-time">${alert.timestamp}</div>
+                <div class="alert-msg">${alert.signature}</div>
+            `;
+            alertList.appendChild(alertDiv);
+        });
+    }
+    
+    function loadTopIOCs() {
+        const tbody = document.getElementById('top-iocs');
+        tbody.innerHTML = '';
+        
+        const iocs = statsData.top_iocs || [];
+        
+        if (iocs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">No IOC hits yet</td></tr>';
+            return;
+        }
+        
+        iocs.forEach(ioc => {
+            const statusClass = ioc.status === 'active' ? 'badge-success' : 
+                               ioc.status === 'false-positive' ? 'badge-danger' : 'badge-warning';
+            const row = `
+                <tr>
+                    <td><code>${ioc.value}</code></td>
+                    <td>${ioc.type}</td>
+                    <td><strong>${ioc.hits}</strong></td>
+                    <td>${ioc.last_seen}</td>
+                    <td><span class="badge ${statusClass}">${ioc.status}</span></td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+    
+    function loadUpdateHistory() {
+        const tbody = document.getElementById('update-history');
+        tbody.innerHTML = '';
+        
+        if (statsData.last_updated) {
+            const row = `
+                <tr>
+                    <td>${statsData.last_updated}</td>
+                    <td>${statsData.stats.active_rules}</td>
+                    <td>-</td>
+                    <td><span class="badge badge-success">success</span></td>
+                </tr>
+            `;
+            tbody.innerHTML = row;
+        }
+    }
+    
+    function refreshData() {
+        console.log('Refreshing data...');
+        showLoading();
+        fetchData();
+    }
+    
+    // Initialize on page load - WAIT for data before showing
+    document.addEventListener('DOMContentLoaded', function() {
+        showLoading();
+        fetchData();
+    });
+    
+    // Auto-refresh every 30 seconds
+    setInterval(fetchData, 30000);
+</script>   
+</body>
+</html>
